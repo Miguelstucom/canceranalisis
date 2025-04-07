@@ -1,4 +1,4 @@
-Id,Sexo,Age,Family history,smoke,alcohol,obesity,diet,Screening_History,Healthcare_Access,Survival_Prediction
+id,Sexo,Age,Family history,smoke,alcohol,obesity,diet,Screening_History,Healthcare_Access,Survival_Prediction
 1,M,77,No,No,Yes,Overweight,Low,Regular,Moderate,Yes
 2,M,59,No,No,No,Overweight,Moderate,Regular,High,Yes
 3,M,83,No,No,No,Obese,High,Regular,Moderate,Yes

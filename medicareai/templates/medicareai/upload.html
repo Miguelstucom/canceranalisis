@@ -436,6 +436,53 @@
         .modal-close:hover {
             color: var(--accent-color);
         }
+
+        .csv-preview {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        .preview-container {
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .preview-title {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+        }
+
+        .csv-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .csv-preview th, .csv-preview td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .csv-preview th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .csv-preview tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .more-rows-indicator {
+            text-align: center;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -460,7 +507,6 @@
                     <li>Cancer Analysis Data (CSV format)</li>
                     <li>Blood Work Results (CSV format)</li>
                     <li>Patient Medical History (CSV format)</li>
-                    <li>Family Medical History (CSV format)</li>
                     <li>High-quality Colonoscopy Image (JPG/PNG format)</li>
                 </ul>
             </div>
@@ -472,84 +518,85 @@
                     <h3>Patient Data Files</h3>
                     <div class="file-group">
                         <div class="file-input-container">
-                            <label>Cancer Analysis CSV<span class="required-field">*</span></label>
-                            <input type="file" name="patient_history" accept=".csv" class="file-input" onchange="previewCSV(this, 'preview-patient-history')">
-                            <div id="preview-patient-history" class="csv-preview"></div>
+                            <label>Medical History CSV<span class="required-field">*</span></label>
+                            <input type="file" name="historial_medico" accept=".csv" class="file-input" 
+                                   onchange="previewCSV(this, 'historialPreview')" required>
+                            <div id="historialPreview" class="csv-preview"></div>
                         </div>
                         <div class="file-input-container">
                             <label>Blood Analysis CSV<span class="required-field">*</span></label>
-                            <input type="file" name="lab_results" accept=".csv" class="file-input" onchange="previewCSV(this, 'preview-lab-results')">
-                            <div id="preview-lab-results" class="csv-preview"></div>
+                            <input type="file" name="analisis_sangre" accept=".csv" class="file-input" 
+                                   onchange="previewCSV(this, 'sangrePreview')" required>
+                            <div id="sangrePreview" class="csv-preview"></div>
                         </div>
                         <div class="file-input-container">
-                            <label>Medical Records CSV<span class="required-field">*</span></label>
-                            <input type="file" name="medical_records" accept=".csv" class="file-input" onchange="previewCSV(this, 'preview-medical-records')">
-                            <div id="preview-medical-records" class="csv-preview"></div>
-                        </div>
-                        <div class="file-input-container">
-                            <label>Family History CSV<span class="required-field">*</span></label>
-                            <input type="file" name="family_history" accept=".csv" class="file-input" onchange="previewCSV(this, 'preview-family-history')">
-                            <div id="preview-family-history" class="csv-preview"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="upload-section">
-                    <h3>Colonoscopy Image</h3>
-                    <div class="image-upload-section">
-                        <label>Upload Patient's Colonoscopy Image<span class="required-field">*</span></label>
-                        <input type="file" name="image" accept="image/*" required class="file-input">
-                        <p style="margin-top: 0.5rem; color: #666; font-size: 0.9rem;">
-                            Supported formats: JPG, PNG, JPEG
-                        </p>
-                    </div>
-                    <button type="submit" class="submit-btn">Analyze Data</button>
-                </div>
-            </form>
-
-            {% if error_message %}
-            <div class="error-message" style="
-                background-color: #fff5f5;
-                border: 1px solid #feb2b2;
-                color: #c53030;
-                padding: 1rem;
-                border-radius: 8px;
-                margin: 1rem 0;
-                text-align: center;">
-                {{ error_message }}
-            </div>
-            {% endif %}
-
-            {% if prediction %}
-            <div class="result">
-                <h2 class="result-title">Analysis Results</h2>
-                
-                <!-- Add image display -->
-                <div class="analysis-content">
-                    <div class="uploaded-image-container">
-                        <h3>Analyzed Image</h3>
-                        <div class="image-preview" onclick="openImageModal()">
-                            <img src="data:image/jpeg;base64,{{ image_data }}" alt="Uploaded colonoscopy image">
+                            <label>Cancer Analysis CSV<span class="required-field">*</span></label>
+                            <input type="file" name="analisis_cancer" accept=".csv" class="file-input" 
+                                   onchange="previewCSV(this, 'cancerPreview')" required>
+                            <div id="cancerPreview" class="csv-preview"></div>
                         </div>
                     </div>
                     
-                    <div class="diagnosis-container">
-                        <h3>Diagnosis Results</h3>
-                        <p class="diagnosis-label">Status: 
-                            <span class="{% if prediction == 'imagenesColonBenigno' %}benigna{% else %}cancerigena{% endif %}">
-                                {% if prediction == 'imagenesColonBenigno' %}
-                                    Benign
-                                {% else %}
-                                    Malignant
-                                {% endif %}
-                            </span>
-                        </p>
-                        <p class="confidence-label">Confidence Level: {{ confidence|floatformat:2 }}%</p>
-                        <div class="confidence-bar">
-                            <div class="confidence-level" style="width: {{ confidence }}%;"></div>
+                    <h3>Colonoscopy Image</h3>
+                    <div class="file-input-container">
+                        <label>Upload Image<span class="required-field">*</span></label>
+                        <input type="file" name="image" accept="image/*" class="file-input" required>
+                    </div>
+                    
+                    <button type="submit" class="submit-button">Analyze</button>
+                </div>
+            </form>
+
+            {% if prediction or survival_pred %}
+            <div class="result">
+                <h2 class="result-title">Analysis Results</h2>
+                
+                {% if prediction %}
+                <div class="analysis-content">
+                    <div class="uploaded-image-container">
+                        <h3>Image Analysis</h3>
+                        <div class="image-preview" onclick="openImageModal()">
+                            <img src="data:image/jpeg;base64,{{ image_data }}" alt="Uploaded colonoscopy image">
+                        </div>
+                        <div class="diagnosis-container">
+                            <p class="diagnosis-label">Status: 
+                                <span class="{% if prediction == 'imagenesColonBenigno' %}benigna{% else %}cancerigena{% endif %}">
+                                    {% if prediction == 'imagenesColonBenigno' %}
+                                        Benign
+                                    {% else %}
+                                        Malignant
+                                    {% endif %}
+                                </span>
+                            </p>
+                            <p class="confidence-label">Confidence Level: {{ confidence|floatformat:2 }}%</p>
+                            <div class="confidence-bar">
+                                <div class="confidence-level" style="width: {{ confidence }}%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
+                
+                {% if survival_pred %}
+                <div class="survival-prediction">
+                    <h3>Survival Prediction</h3>
+                    <p class="diagnosis-label">Prediction: 
+                        <span class="{% if survival_pred == 'Benign' %}benigna{% else %}cancerigena{% endif %}">
+                            {{ survival_pred }}
+                        </span>
+                    </p>
+                    <p class="confidence-label">Confidence Level: {{ survival_prob|floatformat:2 }}%</p>
+                    <div class="confidence-bar">
+                        <div class="confidence-level" style="width: {{ survival_prob }}%;"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if error_message %}
+            <div class="error-message">
+                {{ error_message }}
             </div>
             {% endif %}
         </div>
@@ -610,18 +657,16 @@
                     
                     // Add indication if there are more rows
                     if (lines.length > 6) {
-                        tableHTML += `<p style="color: #666; font-size: 0.8rem; margin-top: 0.5rem;">
-                            Showing first 5 rows of ${lines.length - 1} total rows
-                        </p>`;
+                        tableHTML += '<div class="more-rows-indicator">... and ' + 
+                                   (lines.length - 6) + ' more rows</div>';
                     }
                     
                     preview.innerHTML = tableHTML;
-                    preview.style.display = 'block';
                 };
                 
                 reader.readAsText(file);
             } else {
-                preview.style.display = 'none';
+                preview.innerHTML = '';
             }
         }
 
