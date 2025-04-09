@@ -174,7 +174,7 @@ class ColonCancerModel:
         plt.savefig(os.path.join(metrics_dir, 'confusion_matrix.png'))
         plt.close()
 
-        # Gráfico de entrenamiento
+        # Gráfico de entrenamientoº1
         plt.figure(figsize=(12, 4))
         plt.subplot(1, 2, 1)
         plt.plot(history.history['accuracy'] + history_fine.history['accuracy'], label='Training Accuracy')

@@ -551,45 +551,99 @@
             <div class="result">
                 <h2 class="result-title">Analysis Results</h2>
                 
-                {% if prediction %}
+                {% if combined_prediction %}
                 <div class="analysis-content">
                     <div class="uploaded-image-container">
-                        <h3>Image Analysis</h3>
+                        <h3>Uploaded Image</h3>
                         <div class="image-preview" onclick="openImageModal()">
                             <img src="data:image/jpeg;base64,{{ image_data }}" alt="Uploaded colonoscopy image">
                         </div>
-                        <div class="diagnosis-container">
-                            <p class="diagnosis-label">Status: 
-                                <span class="{% if prediction == 'imagenesColonBenigno' %}benigna{% else %}cancerigena{% endif %}">
-                                    {% if prediction == 'imagenesColonBenigno' %}
-                                        Benign
-                                    {% else %}
-                                        Malignant
-                                    {% endif %}
-                                </span>
-                            </p>
-                            <p class="confidence-label">Confidence Level: {{ confidence|floatformat:2 }}%</p>
-                            <div class="confidence-bar">
-                                <div class="confidence-level" style="width: {{ confidence }}%;"></div>
-                            </div>
+                    </div>
+                    <div class="diagnosis-container">
+                        <h3>Image Analysis</h3>
+                        <p class="diagnosis-label">Status: 
+                            <span class="{% if prediction == 'imagenesColonBenigno' %}benigna{% else %}cancerigena{% endif %}">
+                                {% if prediction == 'imagenesColonBenigno' %}
+                                    Benign
+                                {% else %}
+                                    Malignant
+                                {% endif %}
+                            </span>
+                        </p>
+                        <p class="confidence-label">Confidence Level: {{ confidence|floatformat:2 }}%</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-level" style="width: {{ confidence }}%;"></div>
                         </div>
                     </div>
                 </div>
-                {% endif %}
-                
-                {% if survival_pred %}
-                <div class="survival-prediction">
-                    <h3>Survival Prediction</h3>
-                    <p class="diagnosis-label">Prediction: 
-                        <span class="{% if survival_pred == 'Benign' %}benigna{% else %}cancerigena{% endif %}">
-                            {{ survival_pred }}
-                        </span>
-                    </p>
-                    <p class="confidence-label">Confidence Level: {{ survival_prob|floatformat:2 }}%</p>
-                    <div class="confidence-bar">
-                        <div class="confidence-level" style="width: {{ survival_prob }}%;"></div>
+
+                <div class="analysis-content" style="margin-top: 2rem;">
+                    <div class="diagnosis-container">
+                        <h3>CSV Data Analysis</h3>
+                        <p class="diagnosis-label">Status: 
+                            <span class="{% if survival_pred == 'Benign' %}benigna{% else %}cancerigena{% endif %}">
+                                {{ survival_pred }}
+                            </span>
+                        </p>
+                        <p class="confidence-label">Confidence Level: {{ survival_prob|floatformat:2 }}%</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-level" style="width: {{ survival_prob }}%;"></div>
+                        </div>
+                    </div>
+                    <div class="diagnosis-container">
+                        <h3>Combined Diagnosis</h3>
+                        <p class="diagnosis-label">Status: 
+                            <span class="{% if combined_prediction == 'Benign' %}benigna{% else %}cancerigena{% endif %}">
+                                {{ combined_prediction }}
+                            </span>
+                        </p>
+                        <p class="confidence-label">Confidence Level: {{ combined_confidence|floatformat:2 }}%</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-level" style="width: {{ combined_confidence }}%;"></div>
+                        </div>
                     </div>
                 </div>
+                {% else %}
+                    {% if prediction %}
+                    <div class="analysis-content">
+                        <div class="uploaded-image-container">
+                            <h3>Image Analysis</h3>
+                            <div class="image-preview" onclick="openImageModal()">
+                                <img src="data:image/jpeg;base64,{{ image_data }}" alt="Uploaded colonoscopy image">
+                            </div>
+                            <div class="diagnosis-container">
+                                <p class="diagnosis-label">Status: 
+                                    <span class="{% if prediction == 'imagenesColonBenigno' %}benigna{% else %}cancerigena{% endif %}">
+                                        {% if prediction == 'imagenesColonBenigno' %}
+                                            Benign
+                                        {% else %}
+                                            Malignant
+                                        {% endif %}
+                                    </span>
+                                </p>
+                                <p class="confidence-label">Confidence Level: {{ confidence|floatformat:2 }}%</p>
+                                <div class="confidence-bar">
+                                    <div class="confidence-level" style="width: {{ confidence }}%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if survival_pred %}
+                    <div class="survival-prediction">
+                        <h3>Survival Prediction</h3>
+                        <p class="diagnosis-label">Prediction: 
+                            <span class="{% if survival_pred == 'Benign' %}benigna{% else %}cancerigena{% endif %}">
+                                {{ survival_pred }}
+                            </span>
+                        </p>
+                        <p class="confidence-label">Confidence Level: {{ survival_prob|floatformat:2 }}%</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-level" style="width: {{ survival_prob }}%;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
                 {% endif %}
             </div>
             {% endif %}
