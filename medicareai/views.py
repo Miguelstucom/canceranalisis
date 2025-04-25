@@ -6,6 +6,7 @@ import joblib
 from .ml_model import ColonCancerModel
 import tensorflow as tf
 import base64
+from sklearn.preprocessing import LabelEncoder
 
 model = None
 rf_model = None
@@ -72,7 +73,9 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
         raise ValueError(f"Expected 1 patient, found {len(df_total)} after merging CSVs")
     
     # Select only the specified variables
-    selected_vars = ['Age', 'tumor_size', 'relapse', 'Family history', 'inflammatory_bowel_disease', 'cancer_stage']
+    selected_vars = [
+        'Age', 'tumor_size', 'relapse', 'Family history', 'inflammatory_bowel_disease', 'cancer_stage', 'obesity'
+    ]
     
     # Check if all required variables are present
     missing_vars = [var for var in selected_vars if var not in df_total.columns]
@@ -81,16 +84,34 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
     
     X = df_total[selected_vars].copy()
     
-    # Convert Yes/No columns to 1/0
-    boolean_columns = ['relapse', 'Family history', 'inflammatory_bowel_disease']
-    for col in boolean_columns:
-        if col in X.columns:
-            # Convert to boolean (1/0)
-            X[col] = X[col].map({'Yes': 1, 'No': 0, 'yes': 1, 'no': 0, True: 1, False: 0})
-            # Ensure numeric type
-            X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0).astype(int)
+    # Convert categorical variables to numeric with specific mappings
+    categorical_mappings = {
+        'Sexo': {'F': 0, 'M': 1},
+        'Family history': {'No': 0, 'Yes': 1},
+        'smoke': {'No': 0, 'Yes': 1},
+        'alcohol': {'No': 0, 'Yes': 1},
+        'obesity': {'Normal': 0, 'Overweight': 1, 'Obese': 2},
+        'diet': {'Low': 0, 'Moderate': 1, 'High': 2},
+        'Screening_History': {'Never': 0, 'Irregular': 1, 'Regular': 2},
+        'Healthcare_Access': {'Low': 0, 'Moderate': 1, 'High': 2},
+        'inflammatory_bowel_disease': {'No': 0, 'Yes': 1},
+        'relapse': {'No': 0, 'Yes': 1}
+    }
     
-    print("\n=== Datos para Predicción (después de conversión booleana) ===")
+    for col, mapping in categorical_mappings.items():
+        if col in X.columns:
+            X[col] = X[col].map(mapping)
+            print(f"\nMapping for {col}: {mapping}")
+    
+    # Ensure all numeric columns are properly typed
+    numeric_columns = ['Age', 'Hemoglobina', 'Plaquetas', 'Globulos blancos', 
+                      'Glucosa', 'HDL', 'tumor_size']
+    
+    for col in numeric_columns:
+        if col in X.columns:
+            X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
+    
+    print("\n=== Datos para Predicción (después de conversión) ===")
     print(X)
 
     # Get expected columns from the model
@@ -190,12 +211,24 @@ def upload_image(request):
 
             # Combine predictions if both are available
             if prediction and survival_pred:
+                # Get weights from form, defaulting to 0.7 and 0.3 if not provided
+                image_weight = float(request.POST.get('image_weight', 70)) / 100
+                csv_weight = float(request.POST.get('csv_weight', 30)) / 100
+                print(image_weight)
+                print(csv_weight)
+                
+                # Ensure weights sum to 1
+                total_weight = image_weight + csv_weight
+                if total_weight != 1.0:
+                    image_weight = image_weight / total_weight
+                    csv_weight = csv_weight / total_weight
+                
                 # Convert predictions to numeric values (0 for benign, 1 for malignant)
                 image_pred_numeric = 0 if prediction == 'imagenesColonBenigno' else 1
                 csv_pred_numeric = 0 if survival_pred == 'Benign' else 1
                 
-                # Calculate weighted average (50% each)
-                combined_pred_numeric = (image_pred_numeric * 0.5) + (csv_pred_numeric * 0.5)
+                # Calculate weighted average using form weights
+                combined_pred_numeric = (image_pred_numeric * image_weight) + (csv_pred_numeric * csv_weight)
                 
                 # Convert back to text prediction
                 combined_prediction = "Benign" if combined_pred_numeric < 0.5 else "Malignant"
@@ -203,7 +236,7 @@ def upload_image(request):
                 # Calculate combined confidence
                 image_confidence = confidence / 100  # Convert to decimal
                 csv_confidence = survival_prob / 100  # Convert to decimal
-                combined_confidence = ((image_confidence * 0.5) + (csv_confidence * 0.5)) * 100
+                combined_confidence = ((image_confidence * image_weight) + (csv_confidence * csv_weight)) * 100
 
         except Exception as e:
             error_message = f"An error occurred during analysis: {str(e)}"

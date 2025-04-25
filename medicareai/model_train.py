@@ -37,18 +37,36 @@ if 'Survival_Prediction' not in df_total.columns:
     exit()
 
 # Select only the specified variables
-selected_vars = ['Age', 'tumor_size', 'relapse', 'Family history', 'inflammatory_bowel_disease', 'cancer_stage']
+selected_vars = ['Age', 'tumor_size', 'relapse', 'Family history', 'inflammatory_bowel_disease', 'cancer_stage','obesity']
 X = df_total[selected_vars].copy()
 y = df_total["Survival_Prediction"]
 
-# Convert Yes/No columns to 1/0
-boolean_columns = ['relapse', 'Family history', 'inflammatory_bowel_disease']
-for col in boolean_columns:
+# Convert categorical variables to numeric with specific mappings
+categorical_mappings = {
+    'Sexo': {'F': 0, 'M': 1},
+    'Family history': {'No': 0, 'Yes': 1},
+    'smoke': {'No': 0, 'Yes': 1},
+    'alcohol': {'No': 0, 'Yes': 1},
+    'obesity': {'Normal': 0, 'Overweight': 1, 'Obese': 2},
+    'diet': {'Low': 0, 'Moderate': 1, 'High': 2},
+    'Screening_History': {'Never': 0, 'Irregular': 1, 'Regular': 2},
+    'Healthcare_Access': {'Low': 0, 'Moderate': 1, 'High': 2},
+    'inflammatory_bowel_disease': {'No': 0, 'Yes': 1},
+    'relapse': {'No': 0, 'Yes': 1}
+}
+
+for col, mapping in categorical_mappings.items():
     if col in X.columns:
-        # Convert to boolean (1/0)
-        X[col] = X[col].map({'Yes': 1, 'No': 0, 'yes': 1, 'no': 0, True: 1, False: 0})
-        # Ensure numeric type
-        X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0).astype(int)
+        X[col] = X[col].map(mapping)
+        print(f"\nMapping for {col}: {mapping}")
+
+# Ensure all numeric columns are properly typed
+numeric_columns = ['Age', 'Hemoglobina', 'Plaquetas', 'Globulos blancos', 
+                  'Glucosa', 'HDL', 'tumor_size']
+
+for col in numeric_columns:
+    if col in X.columns:
+        X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
 
 # Convertir etiquetas 'Yes'/'No' o similares a valores numéricos
 if y.dtype == object:

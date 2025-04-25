@@ -483,6 +483,32 @@
             font-style: italic;
             margin-top: 5px;
         }
+
+        .weight-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .weight-inputs input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+
+        .weight-inputs input[type="number"]:hover {
+            border-color: var(--accent-color);
+        }
+
+        .weight-inputs input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -541,6 +567,18 @@
                     <div class="file-input-container">
                         <label>Upload Image<span class="required-field">*</span></label>
                         <input type="file" name="image" accept="image/*" class="file-input" required>
+                    </div>
+                    
+                    <h3>Prediction Weights</h3>
+                    <div class="weight-inputs">
+                        <div class="file-input-container">
+                            <label>Image Analysis Weight (%)<span class="required-field">*</span></label>
+                            <input type="number" name="image_weight" class="file-input" min="0" max="100" value="70" required>
+                        </div>
+                        <div class="file-input-container">
+                            <label>CSV Analysis Weight (%)<span class="required-field">*</span></label>
+                            <input type="number" name="csv_weight" class="file-input" min="0" max="100" value="30" required>
+                        </div>
                     </div>
                     
                     <button type="submit" class="submit-button">Analyze</button>
