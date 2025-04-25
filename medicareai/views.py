@@ -6,6 +6,7 @@ import joblib
 from .ml_model import ColonCancerModel
 import tensorflow as tf
 import base64
+from sklearn.preprocessing import LabelEncoder
 
 model = None
 rf_model = None
@@ -31,7 +32,9 @@ def load_models():
             model_data = joblib.load(rf_model_path)
             if isinstance(model_data, dict):
                 rf_model = model_data['model']
-                rf_model.feature_names_in_ = model_data['feature_names']
+                # Store feature names in a separate attribute if the model doesn't support feature_names_in_
+                if not hasattr(rf_model, 'feature_names_in_'):
+                    rf_model._feature_names = model_data['feature_names']
             else:
                 rf_model = model_data  # For backward compatibility
         else:
@@ -69,55 +72,51 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
     if len(df_total) != 1:
         raise ValueError(f"Expected 1 patient, found {len(df_total)} after merging CSVs")
     
-    # Prepare data for prediction
-    X = df_total.drop(columns=["id"])
+    # Select only the specified variables
+    selected_vars = [
+        'Age', 'tumor_size', 'relapse', 'Family history', 'inflammatory_bowel_disease', 'cancer_stage', 'obesity'
+    ]
     
-    print("\n=== Datos para Predicción (antes de codificación) ===")
-    print(X)
-
-    # Define the expected categorical columns and their possible values
+    # Check if all required variables are present
+    missing_vars = [var for var in selected_vars if var not in df_total.columns]
+    if missing_vars:
+        raise ValueError(f"Missing required variables: {missing_vars}")
+    
+    X = df_total[selected_vars].copy()
+    
+    # Convert categorical variables to numeric with specific mappings
     categorical_mappings = {
-        'Family history': ['No', 'Yes'],
-        'Healthcare_Access': ['Low', 'Moderate', 'High'],
-        'Screening_History': ['Regular', 'Irregular', 'Never'],
-        'Sexo': ['F', 'M'],
-        'smoke': ['No', 'Yes'],
-        'alcohol': ['No', 'Yes'],
-        'obesity': ['Normal', 'Obese', 'Overweight'],
-        'diet': ['High', 'Low', 'Moderate'],
-        'early_detection': ['No', 'Yes'],
-        'inflammatory_bowel_disease': ['No', 'Yes'],
-        'relapse': ['No', 'Yes']
+        'Sexo': {'F': 0, 'M': 1},
+        'Family history': {'No': 0, 'Yes': 1},
+        'smoke': {'No': 0, 'Yes': 1},
+        'alcohol': {'No': 0, 'Yes': 1},
+        'obesity': {'Normal': 0, 'Overweight': 1, 'Obese': 2},
+        'diet': {'Low': 0, 'Moderate': 1, 'High': 2},
+        'Screening_History': {'Never': 0, 'Irregular': 1, 'Regular': 2},
+        'Healthcare_Access': {'Low': 0, 'Moderate': 1, 'High': 2},
+        'inflammatory_bowel_disease': {'No': 0, 'Yes': 1},
+        'relapse': {'No': 0, 'Yes': 1}
     }
     
-    # Create dummy variables with all possible categories
-    for column, categories in categorical_mappings.items():
-        if column in X.columns:
-            # Create dummies with specific prefix and all possible categories
-            dummies = pd.get_dummies(X[column], prefix=column)
-            
-            # Add missing categories if any
-            for category in categories:
-                dummy_col = f"{column}_{category}"
-                if dummy_col not in dummies.columns:
-                    dummies[dummy_col] = 0
-                    
-            # Drop the original column and join the dummies
-            X = X.drop(columns=[column])
-            X = pd.concat([X, dummies], axis=1)
-        else:
-            # If column doesn't exist, create all dummy columns with zeros
-            for category in categories:
-                dummy_col = f"{column}_{category}"
-                X[dummy_col] = 0
-                print(f"Creando columna ausente: {dummy_col}")
-
-    print("\n=== Datos Codificados ===")
+    for col, mapping in categorical_mappings.items():
+        if col in X.columns:
+            X[col] = X[col].map(mapping)
+            print(f"\nMapping for {col}: {mapping}")
+    
+    # Ensure all numeric columns are properly typed
+    numeric_columns = ['Age', 'Hemoglobina', 'Plaquetas', 'Globulos blancos', 
+                      'Glucosa', 'HDL', 'tumor_size']
+    
+    for col in numeric_columns:
+        if col in X.columns:
+            X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
+    
+    print("\n=== Datos para Predicción (después de conversión) ===")
     print(X)
 
-    # Ensure all required columns are present
-    if hasattr(rf_model, 'feature_names_in_'):
-        expected_columns = rf_model.feature_names_in_
+    # Get expected columns from the model
+    expected_columns = getattr(rf_model, 'feature_names_in_', getattr(rf_model, '_feature_names', None))
+    if expected_columns is not None:
         print("\n=== Columnas Esperadas por el Modelo ===")
         print(expected_columns)
         
@@ -133,22 +132,19 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
     print("\n=== Datos Finales para Predicción ===")
     print(X)
 
-    # After preparing final X for prediction
+    # Show feature importances
     if hasattr(rf_model, 'feature_importances_'):
         print("\n=== Importancia de Variables en la Predicción ===")
         feature_importance = pd.DataFrame({
-            'feature': rf_model.feature_names_in_,
+            'feature': expected_columns if expected_columns is not None else X.columns,
             'importance': rf_model.feature_importances_,
             'value': X.iloc[0].values  # Current values for prediction
         })
         feature_importance = feature_importance.sort_values('importance', ascending=False)
         
-        print("\nTop 10 variables más influyentes en la predicción:")
-        print(feature_importance.head(10).to_string())
-        
-        print("\nValores actuales de las variables más importantes:")
-        for _, row in feature_importance.head(10).iterrows():
-            print(f"{row['feature']}: {row['value']:.4f} (Importancia: {row['importance']:.4f})")
+        print("\nImportancia de cada variable:")
+        for _, row in feature_importance.iterrows():
+            print(f"{row['feature']}: {row['importance']:.4f} (Valor actual: {row['value']})")
 
     return X
 
@@ -159,6 +155,8 @@ def upload_image(request):
     survival_prob = None
     error_message = None
     image_data = None
+    combined_prediction = None
+    combined_confidence = None
 
     if request.method == 'POST':
         try:
@@ -211,6 +209,35 @@ def upload_image(request):
                 print(f"Probabilidad: {survival_prob:.2f}%")
                 print(f"Probabilidades completas: {probs}")
 
+            # Combine predictions if both are available
+            if prediction and survival_pred:
+                # Get weights from form, defaulting to 0.7 and 0.3 if not provided
+                image_weight = float(request.POST.get('image_weight', 70)) / 100
+                csv_weight = float(request.POST.get('csv_weight', 30)) / 100
+                print(image_weight)
+                print(csv_weight)
+                
+                # Ensure weights sum to 1
+                total_weight = image_weight + csv_weight
+                if total_weight != 1.0:
+                    image_weight = image_weight / total_weight
+                    csv_weight = csv_weight / total_weight
+                
+                # Convert predictions to numeric values (0 for benign, 1 for malignant)
+                image_pred_numeric = 0 if prediction == 'imagenesColonBenigno' else 1
+                csv_pred_numeric = 0 if survival_pred == 'Benign' else 1
+                
+                # Calculate weighted average using form weights
+                combined_pred_numeric = (image_pred_numeric * image_weight) + (csv_pred_numeric * csv_weight)
+                
+                # Convert back to text prediction
+                combined_prediction = "Benign" if combined_pred_numeric < 0.5 else "Malignant"
+                
+                # Calculate combined confidence
+                image_confidence = confidence / 100  # Convert to decimal
+                csv_confidence = survival_prob / 100  # Convert to decimal
+                combined_confidence = ((image_confidence * image_weight) + (csv_confidence * csv_weight)) * 100
+
         except Exception as e:
             error_message = f"An error occurred during analysis: {str(e)}"
             print(f"Error in upload_image: {str(e)}")
@@ -221,5 +248,7 @@ def upload_image(request):
         'survival_pred': survival_pred,
         'survival_prob': survival_prob,
         'error_message': error_message,
-        'image_data': image_data
+        'image_data': image_data,
+        'combined_prediction': combined_prediction,
+        'combined_confidence': combined_confidence
     })
