@@ -44,7 +44,6 @@ def load_models():
 def process_csv_files(historial_file, sangre_file, cancer_file):
     # Read CSV files
     df_historial = pd.read_csv(historial_file)
-    df_sangre = pd.read_csv(sangre_file)
     df_cancer = pd.read_csv(cancer_file)
     
     print("\n=== Datos Cargados ===")
@@ -56,15 +55,17 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
         df_historial = df_historial.drop(columns=['Survival_Prediction'])
         print("\nColumna 'Survival_Prediction' eliminada del historial médico")
     
-    print("\nAnálisis de Sangre:")
-    print(df_sangre)
     print("\nAnálisis de Cáncer:")
     print(df_cancer)
     
-    # Merge all dataframes
-    df_total = df_historial \
-        .merge(df_sangre, on="id", how="inner") \
-        .merge(df_cancer, on="id", how="inner")
+    # Merge dataframes, handling optional blood analysis
+    if sangre_file is not None:
+        df_sangre = pd.read_csv(sangre_file)
+        print("\nAnálisis de Sangre:")
+        print(df_sangre)
+        df_total = df_historial.merge(df_sangre, on="id", how="inner").merge(df_cancer, on="id", how="inner")
+    else:
+        df_total = df_historial.merge(df_cancer, on="id", how="inner")
     
     print("\n=== Datos Combinados ===")
     print(df_total)
@@ -104,8 +105,7 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
             print(f"\nMapping for {col}: {mapping}")
     
     # Ensure all numeric columns are properly typed
-    numeric_columns = ['Age', 'Hemoglobina', 'Plaquetas', 'Globulos blancos', 
-                      'Glucosa', 'HDL', 'tumor_size']
+    numeric_columns = ['Age', 'tumor_size']
     
     for col in numeric_columns:
         if col in X.columns:
@@ -131,20 +131,6 @@ def process_csv_files(historial_file, sangre_file, cancer_file):
     
     print("\n=== Datos Finales para Predicción ===")
     print(X)
-
-    # Show feature importances
-    if hasattr(rf_model, 'feature_importances_'):
-        print("\n=== Importancia de Variables en la Predicción ===")
-        feature_importance = pd.DataFrame({
-            'feature': expected_columns if expected_columns is not None else X.columns,
-            'importance': rf_model.feature_importances_,
-            'value': X.iloc[0].values  # Current values for prediction
-        })
-        feature_importance = feature_importance.sort_values('importance', ascending=False)
-        
-        print("\nImportancia de cada variable:")
-        for _, row in feature_importance.iterrows():
-            print(f"{row['feature']}: {row['importance']:.4f} (Valor actual: {row['value']})")
 
     return X
 
@@ -180,8 +166,8 @@ def upload_image(request):
 
                 os.remove(temp_path)
 
-            # Process CSV files if all are provided
-            required_files = ['historial_medico', 'analisis_sangre', 'analisis_cancer']
+            # Process CSV files if required files are provided
+            required_files = ['historial_medico', 'analisis_cancer']
             if all(file in request.FILES for file in required_files):
                 # Load Random Forest model
                 load_models()
@@ -189,10 +175,11 @@ def upload_image(request):
                 if rf_model is None:
                     raise ValueError("Random Forest model not found")
 
-                # Process CSV files
+                # Process CSV files with optional blood analysis
+                sangre_file = request.FILES.get('analisis_sangre')
                 X = process_csv_files(
                     request.FILES['historial_medico'],
-                    request.FILES['analisis_sangre'],
+                    sangre_file,
                     request.FILES['analisis_cancer']
                 )
 

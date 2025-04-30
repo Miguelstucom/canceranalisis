@@ -27,8 +27,7 @@ df_cancer = pd.read_csv("medicareai/static/csv/Analisis_cancer.csv")
 print("\nAnálisis de Cáncer:")
 print(df_cancer.head())
 
-df_total = df_historial.merge(df_sangre, on="id", how="inner") \
-    .merge(df_cancer, on="id", how="inner")
+df_total = df_historial.merge(df_cancer, on="id", how="inner")
 
 print(f"\n✅ Datos combinados correctamente: {df_total.shape[0]} pacientes")
 
@@ -113,6 +112,15 @@ modelos = {
             'max_depth': [None, 10, 20, 30],
             'min_samples_split': [2, 5, 10],
             'min_samples_leaf': [1, 2, 4]
+        }
+    },
+
+    "SVM": {
+        'model': SVC(random_state=42),
+        'params': {
+            'C': [0.1, 1, 10,],
+            'kernel': ['linear', 'rbf'],
+            'gamma': [0.1, 1]
         }
     },
 
