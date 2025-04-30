@@ -184,11 +184,12 @@
 
         .csv-preview th {
             background-color: var(--primary-color);
-            color: white;
+            color: black;
             padding: 0.75rem;
             text-align: left;
             position: sticky;
             top: 0;
+            font-weight: 600;
         }
 
         .csv-preview td {
@@ -198,10 +199,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            background-color: var(--light-gray);
+        }
+
+        .csv-preview tr:nth-child(even) td {
+            background-color: white;
         }
 
         .csv-preview tr:hover td {
-            background-color: var(--light-gray);
+            background-color: #e2e8f0;
         }
 
         .submit-btn {
@@ -509,6 +515,34 @@
             border-color: var(--accent-color);
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
         }
+
+        .submit-button {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 300px;
+            margin: 2rem auto;
+            display: block;
+        }
+
+        .submit-button:hover:not(:disabled) {
+            background-color: var(--primary-color);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .submit-button:disabled {
+            background-color: var(--light-gray);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -531,9 +565,9 @@
                 <p>Please ensure all required files are prepared for comprehensive analysis:</p>
                 <ul>
                     <li>Cancer Analysis Data (CSV format)</li>
-                    <li>Blood Work Results (CSV format)</li>
+                    <li>Blood Work Results (CSV format) (Optional)</li>
                     <li>Patient Medical History (CSV format)</li>
-                    <li>High-quality Colonoscopy Image (JPG/PNG format)</li>
+                    <li>High-quality Histological Image (JPG/PNG format)</li>
                 </ul>
             </div>
 
@@ -550,9 +584,9 @@
                             <div id="historialPreview" class="csv-preview"></div>
                         </div>
                         <div class="file-input-container">
-                            <label>Blood Analysis CSV<span class="required-field">*</span></label>
+                            <label>Blood Analysis CSV</label>
                             <input type="file" name="analisis_sangre" accept=".csv" class="file-input" 
-                                   onchange="previewCSV(this, 'sangrePreview')" required>
+                                   onchange="previewCSV(this, 'sangrePreview')">
                             <div id="sangrePreview" class="csv-preview"></div>
                         </div>
                         <div class="file-input-container">
@@ -563,7 +597,7 @@
                         </div>
                     </div>
                     
-                    <h3>Colonoscopy Image</h3>
+                    <h3>Histological Image</h3>
                     <div class="file-input-container">
                         <label>Upload Image<span class="required-field">*</span></label>
                         <input type="file" name="image" accept="image/*" class="file-input" required>
@@ -573,15 +607,20 @@
                     <div class="weight-inputs">
                         <div class="file-input-container">
                             <label>Image Analysis Weight (%)<span class="required-field">*</span></label>
-                            <input type="number" name="image_weight" class="file-input" min="0" max="100" value="70" required>
+                            <input type="number" name="image_weight" id="image_weight" class="file-input" min="0" max="100" value="70" required
+                                   onchange="validateWeights()" oninput="validateWeights()">
                         </div>
                         <div class="file-input-container">
                             <label>CSV Analysis Weight (%)<span class="required-field">*</span></label>
-                            <input type="number" name="csv_weight" class="file-input" min="0" max="100" value="30" required>
+                            <input type="number" name="csv_weight" id="csv_weight" class="file-input" min="0" max="100" value="30" required
+                                   onchange="validateWeights()" oninput="validateWeights()">
                         </div>
                     </div>
+                    <div id="weight-error" class="error-message" style="display: none; color: var(--danger-color); margin-top: 1rem;">
+                        The sum of weights must be exactly 100%
+                    </div>
                     
-                    <button type="submit" class="submit-button">Analyze</button>
+                    <button type="submit" class="submit-button" id="submit-button">Analyze</button>
                 </div>
             </form>
 
@@ -792,6 +831,29 @@
         document.querySelector('.modal-content').addEventListener('click', function(event) {
             event.stopPropagation();
         });
+
+        function validateWeights() {
+            const imageWeight = parseInt(document.getElementById('image_weight').value) || 0;
+            const csvWeight = parseInt(document.getElementById('csv_weight').value) || 0;
+            const totalWeight = imageWeight + csvWeight;
+            const errorDiv = document.getElementById('weight-error');
+            const submitButton = document.getElementById('submit-button');
+            
+            if (totalWeight !== 100) {
+                errorDiv.style.display = 'block';
+                submitButton.disabled = true;
+                submitButton.style.opacity = '0.5';
+                submitButton.style.cursor = 'not-allowed';
+            } else {
+                errorDiv.style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.style.opacity = '1';
+                submitButton.style.cursor = 'pointer';
+            }
+        }
+
+        // Call validateWeights on page load
+        document.addEventListener('DOMContentLoaded', validateWeights);
     </script>
 </body>
 </html> 
